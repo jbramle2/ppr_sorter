@@ -5,10 +5,6 @@ with open('stats_pass.txt', 'r') as t:
     stats_pass = t.read()
 
 
-
-
-
-
 async def get_players(message):
     found_names_with_ids = []
 
@@ -67,10 +63,6 @@ async def get_player_ppr(player):
     else:
         c2.close()
         return 0
-
-
-
-
 
 
 def find_best_split(nested_list):
