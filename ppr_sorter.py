@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+from discord import app_commands
 from return_sort_ppr import *
 
 intents = discord.Intents.default()
@@ -48,7 +49,43 @@ async def on_raw_reaction_add(payload):
         await channel.send("Suggested Teams: \n" + '```Red  [' + str(round(avg_ppr_list1, 2)) + ']: ' + formatted_list1
                            + "\n" + 'Blue [' + str(round(avg_ppr_list2, 2)) + ']: ' + formatted_list2 + "```")
 
-
         await bot.process_commands(message)
+
+
+@bot.event
+async def on_message(message):
+    if message.author == bot.user:
+        return
+
+    if "The elim pickup has started" in message.content:
+        # Add a reaction to the message
+        emoji = "⚖️"
+        await message.add_reaction(emoji)
+
+
+@bot.tree.command(name="linkdiscord", description="linkdiscord", guild=discord.Object(id=192460940409700352))
+@app_commands.checks.has_permissions(manage_channels=True)
+async def linkdiscord(interaction: discord.Interaction, ut_name: str, ut_id: str, discord_id: str):
+
+    message = await insert_update(ut_name, ut_id, discord_id)
+    await interaction.response.send_message(message)
+
+
+@bot.tree.command(name="deldiscordid", description="deldiscordid", guild=discord.Object(id=192460940409700352))
+@app_commands.checks.has_permissions(manage_channels=True)
+async def deldiscordid(interaction: discord.Interaction, discord_id: str):
+
+    message = await remove_discord_id(discord_id)
+    await interaction.response.send_message(message)
+
+@bot.event
+async def on_ready():
+    print(f'Bot is online as {bot.user}!')
+    try:
+        synced = await bot.tree.sync(guild=discord.Object(id=192460940409700352))
+        print(f"Synced {len(synced)} command(s)")
+    except Exception as e:
+        print(f"Failed to sync commands: {e}")
+
 
 bot.run(str(discordtoken))
