@@ -1,10 +1,43 @@
 from itertools import combinations
 import psycopg2
 from psycopg2 import sql
+import re
 
 with open('stats_pass.txt', 'r') as t:
     stats_pass = t.read()
 
+
+# async def get_players(message):
+#     found_names_with_ids = []
+#
+#     # Create a dictionary mapping both display names and usernames to their IDs
+#     names_to_ids = {member.display_name: member.id for member in message.guild.members}
+#     names_to_ids.update({member.name: member.id for member in message.guild.members})
+#     names_to_ids.update({member.mention: member.id for member in message.guild.members})
+#
+#     # Iterate over each word in the message
+#     for word in message.content.split():
+#         # Clean the word by removing leading and trailing punctuation
+#         print(f'word1: {word}')
+#         clean_word = word.strip('@,!?[]{}<>:;"\'')
+#         # Needed to fully remove escaped characters
+#         clean_word = clean_word.replace('\\', '')
+#
+#         print(f'word2: {clean_word}')
+#
+#         # Check if the cleaned word is a display name or username in the server
+#         # If a word is a name, it appends it along with their discord id.
+#         if clean_word in names_to_ids:
+#             found_names_with_ids.append([clean_word, names_to_ids[clean_word]])
+#
+#     print(found_names_with_ids)
+#
+#     # Remove duplicates based on 2nd value of nested list
+#     unique_dict = {item[1]: item for item in found_names_with_ids}
+#     unique_list = list(unique_dict.values())
+#
+#     # await bot.process_commands(message)
+#     return unique_list
 
 async def get_players(message):
     found_names_with_ids = []
@@ -12,30 +45,33 @@ async def get_players(message):
     # Create a dictionary mapping both display names and usernames to their IDs
     names_to_ids = {member.display_name: member.id for member in message.guild.members}
     names_to_ids.update({member.name: member.id for member in message.guild.members})
-    names_to_ids.update({member.mention: member.id for member in message.guild.members})
+
+    # Mentions in Discord follow the pattern <@USERID> or <@!USERID>
+    mention_pattern = r'<@!?(\d+)>'
 
     # Iterate over each word in the message
     for word in message.content.split():
-        # Clean the word by removing leading and trailing punctuation
-        print(f'word1: {word}')
-        clean_word = word.strip('@,!?[]{}<:;"\'')
-        # Needed to fully remove escaped characters
-        clean_word = clean_word.replace('\\', '')
+        # Check if the word matches a mention pattern
+        match = re.match(mention_pattern, word)
+        if match:
+            user_id = int(match.group(1))
+            user = message.guild.get_member(user_id)
+            if user:
+                # Use the display name or username
+                found_names_with_ids.append([user.display_name, user.id])
+        else:
+            # Clean the word by removing leading and trailing punctuation
+            clean_word = word.strip('@,!?[]{}<>:;"\'')
+            clean_word = clean_word.replace('\\', '')
 
-        print(f'word2: {clean_word}')
+            # Check if the cleaned word is a display name or username in the server
+            if clean_word in names_to_ids:
+                found_names_with_ids.append([clean_word, names_to_ids[clean_word]])
 
-        # Check if the cleaned word is a display name or username in the server
-        # If a word is a name, it appends it along with their discord id.
-        if clean_word in names_to_ids:
-            found_names_with_ids.append([clean_word, names_to_ids[clean_word]])
-
-    print(found_names_with_ids)
-
-    # Remove duplicates based on 2nd value of nested list
+    # Remove duplicates based on the 2nd value of the nested list
     unique_dict = {item[1]: item for item in found_names_with_ids}
     unique_list = list(unique_dict.values())
 
-    # await bot.process_commands(message)
     return unique_list
 
 
@@ -60,7 +96,10 @@ async def get_player_ppr(player):
         player_ppr = c2.fetchone()
         c2.close()
         print(player_ppr)
-        return round(player_ppr[0], 2)
+        if(player_ppr):
+            return round(player_ppr[0], 2)
+        else:
+            return 2.0
 
 
     else:
@@ -132,7 +171,6 @@ async def insert_update(ut_name, ut_id, discord_id):
         c2.execute("SELECT discord_id, playername FROM utpugs_discordids WHERE discord_id = '" + str(discord_id) + "'")
         discord_id_test = c2.fetchone()
         print(discord_id_test)
-        c2.close()
 
         if len(discord_id) > 17 and len(ut_id) == 32 and discord_id_test is None:
 
